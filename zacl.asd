@@ -20,7 +20,8 @@
                #:alexandria
                #:md5
                #:cl+ssl
-	       #:local-time)
+	       #:local-time
+	       #:cl-base64)
   :serial t
   :components ((:file "package")
                #+clozure
