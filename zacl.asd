@@ -19,7 +19,8 @@
                #:cl-store
                #:alexandria
                #:md5
-               #:cl+ssl)
+               #:cl+ssl
+	       #:local-time)
   :serial t
   :components ((:file "package")
                #+clozure

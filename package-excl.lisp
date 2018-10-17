@@ -543,3 +543,130 @@ values otherwise."
 (defun excl:fasl-read (file)
   (with-open-file (stream file :element-type '(unsigned-byte 8))
     (restore stream)))
+
+;;; BASE64
+
+
+(defun excl:base64-string-to-string (string)
+  ;;
+  ;; given a base64 string, return it decoded.
+  ;; beware: the result will not be a simple string
+  ;;
+  (let ((res (make-array (length string) :element-type 'character
+			 :fill-pointer 0
+			 :adjustable t))
+	(arr *base64-decode*))
+    (declare (type (simple-array (unsigned-byte 8) (128)) arr))
+    (do ((i 0 (+ i 4))
+	 (cha)
+	 (chb))
+	((>= i (length string)))
+      
+      ; for multiline decoding, ignore cr and lfs
+      (loop
+	(let ((ch (char string i)))
+	  (if* (or (eq ch #\linefeed) (eq ch #\return))
+	     then (incf i)
+		  (if* (>= i (length string)) 
+		     then (return-from excl:base64-string-to-string))
+	     else (return))))
+	  
+      (let ((val (+ (ash (aref arr (char-code (char string i))) 18)
+		    (ash (aref arr (char-code (char string (+ i 1)))) 12)
+		    (ash (aref arr (char-code 
+				    (setq cha (char string (+ i 2)))))
+			 6)
+		    (aref arr (char-code 
+			       (setq chb (char string (+ i 3))))))))
+	(vector-push-extend (code-char (ash val -16)) res)
+	;; when the original size wasn't a mult of 3 there may be
+	;; non-characters left over
+	(if* (not (eq cha #\=))
+	   then (vector-push-extend (code-char (logand #xff (ash val -8))) res))
+	(if* (not (eq chb #\=))
+	   then (vector-push-extend (code-char (logand #xff val)) res))))
+    res))
+
+(defun excl:string-to-base64-string (str)
+  ;;
+  ;; take the given string and encode as a base64 string
+  ;; beware: the result will not be a simple string
+  ;;
+  (let ((output (make-array (ceiling (* 1.3 (length str)))
+			    :element-type 'character  
+			    :fill-pointer 0
+			    :adjustable t))
+	v1 v2 v3 eol
+	(from 0)
+	(max (length str))
+	)
+      
+    (loop
+      (if* (>= from max) 
+	 then (return))
+      (setq v1 (char-code (schar str from)))
+	
+      (incf from)
+	
+      (if* (>= from max)
+	 then (setq v2 0
+		    eol t)
+	 else (setq v2 (char-code (schar str from))))
+	
+      (incf from)
+	
+      ; put out first char of encoding
+      (vector-push-extend (schar *base64-encode* (logand #x3f
+							 (ash v1 -2)))
+			  output)
+	
+      ; put out second char of encoding
+	
+      (vector-push-extend (schar *base64-encode* 
+				 (+ (ash (logand 3 v1) 4)
+				    (logand #xf (ash v2 -4))))
+							   
+			  output)
+	
+      (if* eol
+	 then ; two pads
+	      (vector-push-extend #\= output)
+	      (vector-push-extend #\= output)
+	      (return))
+	
+      (if* (>= from max)
+	 then (setq v3 0
+		    eol t)
+	 else (setq v3 (char-code (schar str from))))
+	
+      (incf from)
+	
+	
+      ; put out third char of encoding
+	
+      (vector-push-extend (schar *base64-encode* 
+				 (+ (ash (logand #xf v2) 2)
+				    (logand 3 (ash v3 -6))))
+							   
+			  output)
+	
+      (if* eol
+	 then (vector-push-extend #\= output)
+	      (return))
+	
+      ; put out fourth char of encoding
+	
+      (vector-push-extend (schar *base64-encode* (logand #x3f v3))
+			  output))
+      
+    output))
+
+;;; Microtime
+
+(defconstant excl::base-for-internal-real-time -455615030)
+
+
+
+(defun excl::acl-internal-real-time ()
+  (values (-  (get-universal-time) 4165516800)
+	  (/ (local-time:nsec-of (local-time:now)) 1000)))

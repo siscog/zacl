@@ -231,7 +231,10 @@
            #:stream-error-identifier
            #:stream-error-code)
   (:export #:sm
-           #:errorset))
+           #:errorset)
+  (:export #:string-to-base64-string
+	   #:base64-string-to-string))
+
 
 (defpackage #:ff
   (:use)
