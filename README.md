@@ -76,6 +76,19 @@ the maintainers will see them.
 
 **Possibly slow**. Using generic functions and portability layers will
 be slower than running aserve natively on Allegro CL. There aren't
-many ways around it. If you have a specific performance issue that
-you'd like ZACL to address, [get in touch](mailto:xach@xach.com).
+many ways around it. If you do have a specific performance issue when
+running with ZACL that you would like to see ZACL try to address, then
+please [open an
+Issue](https://gitlab.common-lisp.net/zbeane/zacl/issues) or [get in
+touch](mailto:xach@xach.com).
+
+With that said, AllegroServe will always run best on its native
+platform, which is [Allegro
+CL](https://franz.com/products/allegro-common-lisp/). So if you want
+to run AllegroServe for mission-critical or performance-critical
+applications, then you may want to consider investing [Allegro
+CL](https://franz.com/products/allegro-common-lisp/). This option also
+comes with the benefit of the dedicated, world-class [support from
+Franz Inc. engineers](https://franz.com).
+
 
