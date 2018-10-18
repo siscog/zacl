@@ -48,12 +48,12 @@ AllegroServe](https://github.com/genworks/aserve/tree/zacl-compatible)
 has its system name as  `zaserve`. This `zaserve` system definition
 includes a dependency on ZACL, so you can load it simply by invoking
 
-    `(ql:quickload :zaserve)`
+    (ql:quickload :zaserve)
 
 Of course, if for some reason you only want the `zacl` system itself,
 you can load that with
 
-    `(ql:quickload :zacl)`
+    (ql:quickload :zacl)
 
 
 ## Limitations
@@ -86,9 +86,11 @@ With that said, AllegroServe will always run best on its native
 platform, which is [Allegro
 CL](https://franz.com/products/allegro-common-lisp/). So if you want
 to run AllegroServe for mission-critical or performance-critical
-applications, then you may want to consider investing [Allegro
-CL](https://franz.com/products/allegro-common-lisp/). This option also
-comes with the benefit of the dedicated, world-class [support from
-Franz Inc. engineers](https://franz.com).
+applications, and with a guarantee of a supported, trouble-free
+experience, then you may want to consider investing [Allegro
+CL](https://franz.com/products/allegro-common-lisp/) for your
+AllegroServe needs. This option also comes with the benefit of
+dedicated, world-class [support from Franz
+Inc. engineers](https://franz.com).
 
 
