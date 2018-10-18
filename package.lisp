@@ -11,6 +11,10 @@
                 ;; XXX Private package
                 #:without-interrupts
                 #:fd-stream-fd)
+  #+sbcl
+  (:import-from #:usocket
+		#:get-host-by-name)
+  
   (:import-from #:cl+ssl
                 #:make-ssl-client-stream
                 #:make-ssl-server-stream)
@@ -124,7 +128,7 @@
 
 (defpackage #:zacl-reader
   (:use #:cl)
-  (:export #:*allegro-rewriting-readtable*))
+  (:export #:*allegro-rewriting-readtable* #:cl-file))
 
 (defpackage #:zacl-if-star
   (:use #:cl)

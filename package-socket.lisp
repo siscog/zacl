@@ -203,10 +203,17 @@
   `(progn ,@body))
 
 (defun socket:ipaddr-to-hostname (ipaddr)
-  (ipaddr-to-hostname ipaddr))
+  #+sbcl(declare (ignore ipaddr))
+  #+ccl (ipaddr-to-hostname ipaddr)
+  #+sbcl (error "socket:ipaddr-to-hostname not implemented in ~a" (lisp-implementation-type)))
 
 (defun socket:lookup-hostname (name)
-  (lookup-hostname name))
+  #+ccl (lookup-hostname name)
+  ;;
+  ;; FLAG -- this assumes IPv4 - fix to work with IPv6 also. 
+  ;;
+  #+sbcl (format nil "~{~a~^.~}" (coerce (get-host-by-name name) 'list)))
+
 
 (defun socket::make-ssl-client-stream (socket &key &allow-other-keys)
   (let ((stream (make-ssl-client-stream (real-stream socket))))

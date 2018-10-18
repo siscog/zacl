@@ -192,12 +192,6 @@ values otherwise."
 (defun excl:fixnump (integer)
   (typep integer 'fixnum))
 
-(defun excl:split-into-words (string)
-  (split "\\s+" string))
-
-(defun excl:split-on-character (string character)
-  (split-sequence character string))
-
 (defmacro excl::with-dynamic-extent-usb8-array ((var len) &body body)
   `(let ((,var (make-array ,len :element-type '(unsigned-byte 8))))
      ,@body))

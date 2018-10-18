@@ -2,10 +2,11 @@
 
 (in-package #:zacl)
 
-;; This mimics what aserve.asd does.
-(defclass asdf::cl-file (asdf:cl-source-file)
+(defclass zacl-reader:cl-file (asdf:cl-source-file)
   ((type :initform "cl")))
 
 (defmethod asdf:perform :around ((operation asdf:compile-op)
-                                 (component asdf::cl-file))
+                                 (component zacl-reader:cl-file))
   (with-zacl-build-environment (call-next-method)))
+
+
