@@ -546,7 +546,7 @@ values otherwise."
 
 ;;; BASE64
 
-(defun excl:nbase64-string-to-string (string)
+(defun excl:base64-string-to-string (string)
   (cl-base64:base64-string-to-string string))
 
 (defun excl:string-to-base64-string (str)
