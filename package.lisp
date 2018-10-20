@@ -281,7 +281,39 @@
 
 (defpackage #:util.zip
   (:use)
-  (:export #:inflate-stream))
+  (:export #:inflate-stream #:deflate-stream #:deflate-target-stream))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (let ((net.uri (find-package :net.uri))
+	(net.aserve (find-package :net.aserve)))
+    (if (and net.uri (not (and net.aserve (member net.uri (package-use-list net.aserve)))))
+	(let ((puri? (and (find-package :puri)
+			  (string-equal (first (package-nicknames :puri)) "net.uri"))))
+
+	  (if puri?
+
+	      (progn
+		(warn "
+
+Existing \"net.uri\" package was detected as a nickname of the \"puri\" package. 
+
+Removing the \"net.uri\" nickname from \"puri\" because ZACL needs to
+define this package name.
+
+")
+		(rename-package :puri :puri nil))
+
+	      (progn
+		(warn  "
+
+-Existing \"net.uri\" package was detected. 
+
+Deleting the \"net.uri\" package, because ZACL needs to define this
+package name.
+
+")
+		(delete-package :net.uri)))))))
+
 
 (defpackage #:net.uri
   (:use)
@@ -357,3 +389,5 @@
 (defpackage #:util.string
   (:use)
   (:export #:string+))
+
+(defpackage #:acl-socket (:use))
