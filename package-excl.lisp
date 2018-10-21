@@ -192,12 +192,6 @@ values otherwise."
 (defun excl:fixnump (integer)
   (typep integer 'fixnum))
 
-(defun excl:split-into-words (string)
-  (split "\\s+" string))
-
-(defun excl:split-on-character (string character)
-  (split-sequence character string))
-
 (defmacro excl::with-dynamic-extent-usb8-array ((var len) &body body)
   `(let ((,var (make-array ,len :element-type '(unsigned-byte 8))))
      ,@body))
@@ -543,3 +537,20 @@ values otherwise."
 (defun excl:fasl-read (file)
   (with-open-file (stream file :element-type '(unsigned-byte 8))
     (restore stream)))
+
+;;; BASE64
+
+(defun excl:base64-string-to-string (string)
+  (cl-base64:base64-string-to-string string))
+
+(defun excl:string-to-base64-string (str)
+  (cl-base64:string-to-base64-string str :columns 52))
+
+
+;;; Microtime
+
+(defconstant excl::base-for-internal-real-time -455615030)
+
+(defun excl::acl-internal-real-time ()
+  (values (-  (get-universal-time) 4165516800)
+	  (/ (local-time:nsec-of (local-time:now)) 1000)))

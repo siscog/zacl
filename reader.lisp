@@ -5,7 +5,7 @@
 (defparameter *allegro-feature-symbols*
   '("VERSION>=" "VERSION="))
 
-(defparameter *allegro-version-feature* :zacl-allegro-10-0)
+(defparameter *allegro-version-feature* :zacl-allegro-10-1)
 (defparameter *allegro-latest-feature* :zacl-latest-allegro)
 
 (defun allegro-conditional-p (expression)
