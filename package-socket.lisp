@@ -2,6 +2,8 @@
 
 (in-package #:zacl)
 
+(defparameter *print-hostname-in-stream* nil)
+
 (defun ip-address-integer (ip-address)
   (check-type ip-address (simple-array * (4)) "octet vector")
   (logand #xFFFFFFFF
@@ -203,9 +205,12 @@
   `(progn ,@body))
 
 (defun socket:ipaddr-to-hostname (ipaddr)
-  #+sbcl(declare (ignore ipaddr))
-  #+ccl (ipaddr-to-hostname ipaddr)
-  #+sbcl (error "socket:ipaddr-to-hostname not implemented in ~a" (lisp-implementation-type)))
+  #+sbcl (sb-bsd-sockets:host-ent-name
+	  (sb-bsd-sockets:get-host-by-address
+	   (if (typep ipaddr 'string)
+	       (sb-bsd-sockets:make-inet-address ipaddr)
+	       ipaddr)))
+  #+ccl (ipaddr-to-hostname ipaddr))
 
 (defun socket:lookup-hostname (name)
   #+ccl (lookup-hostname name)
@@ -222,17 +227,64 @@
 
 (defun socket::make-ssl-server-stream (socket
                                        &key
+					 context
                                          certificate key certificate-password
                                          verify
                                          ca-file ca-directory crl-file crl-check method max-depth)
   (declare (ignore max-depth method crl-check crl-file ca-directory ca-file verify))
   (let ((stream (make-ssl-server-stream (real-stream socket)
-                                        :certificate certificate
-                                        :key (or key certificate)
-                                        :password certificate-password)))
+					:certificate certificate
+					:key (or key certificate)
+					:password certificate-password)))
     (setf (real-stream socket) stream)
     socket))
 
 (defun socket:socket-control (socket &key read-timeout write-timeout)
   (declare (ignore socket read-timeout write-timeout))
   nil)
+
+(defun socket:make-ssl-server-context (&key (method :tlsv1+)
+					    certificate
+					    key
+					    certificate-password
+					    verify
+					    (max-depth 10)
+					    ca-file
+					    ca-directory
+					    ciphers
+					    crl-check
+					    crl-file
+					    (prefer-server-cipher-order t)
+					    server-name)
+  (declare (ignore server-name))
+  (error "unimplemented")
+  (apply #'cl+ssl:make-context
+	 (loop for (k v)
+		 on (list :method nil
+			  (:options (list +SSL-OP-ALL+))
+			  (:session-cache-mode +ssl-sess-cache-server+)
+			  (:verify-location :default)
+			  :verify-depth max-depth
+			  (:verify-mode +ssl-verify-peer+)
+			  (:verify-callback nil verify-callback-supplied-p)
+			  (:cipher-list +default-cipher-list+)
+			  (:pem-password-callback 'pem-password-callback))
+	       by #'cddr
+	       when v
+		 collect k and collect v)))
+
+(defun socket:make-ssl-client-context (&rest args)
+  (declare (ignore args))
+  (error "unimplemented"))
+
+(defun socket:get-ssl-verify-result (&rest args)
+  (declare (ignore args))
+  (error "unimplemented"))
+
+(defun socket:x509-certificate-subject (&rest args)
+  (declare (ignore args))
+  (error "unimplemented"))
+
+(defun get-ssl-peer-certificate (&rest args)
+  (declare (ignore args))
+  (error "unimplemented"))

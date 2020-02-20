@@ -36,7 +36,9 @@
     (make-process name :class 'process
                   :initial-bindings initial-bindings)))
 
-(defgeneric mp:process-thread (process))
+(defgeneric mp:process-thread (process)
+  (:method ((process process))
+    (thread process)))
 
 (defgeneric mp:process-name (process)
   (:method (process)

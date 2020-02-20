@@ -246,21 +246,67 @@
 
 (defpackage #:socket
   (:use)
-  (:intern #:make-ssl-server-stream
-           #:make-ssl-client-stream)
-  (:export #:make-socket
-           #:socket-error
-           #:accept-connection
-           #:socket-control
-           #:local-port
-           #:local-host
-           #:set-socket-options
-           #:ipaddr-to-dotted
-           #:ipaddr-to-hostname
-           #:dotted-to-ipaddr
-           #:lookup-hostname
-           #:remote-host
-           #:with-pending-connect))
+  (:export
+   ;; Special Variables
+   #:*socket-version* ;; unimplemented
+   #:*print-hostname-in-stream* ;; unimplemented needed, irrelevant
+   #:*ipv6* ;; unimplemented
+
+   ;; General Functions
+   #:accept-connection
+   #:dotted-to-ipaddr
+   #:dotted-address-p	       ;; unimplemented
+   #:get-ip-interfaces	       ;; unimplemented
+   #:ipaddr-to-dotted
+   #:ipaddr-equalp ;; unimplemented
+   #:ipaddr-to-hostname
+   #:ipaddrp		    ;; unimplemented
+   #:ipv6		    ;; unimplemented
+   #:ipv6-address-p	    ;; unimplemented
+   #:lookup-hostname
+   #:lookup-port ;; unimplemented
+   #:make-socket
+   #:with-pending-connect
+   #:receive-from		;; unimplemented
+   #:send-to			;; unimplemented
+   #:set-socket-options
+   #:shutdown			;; unimplemented
+   #:socket-control
+   #:socket-os-fd ;; unimplemented
+
+   ;; Socket Acessores
+   #:remote-host
+   #:local-host
+   #:local-port
+   #:remote-filename ;; unimplemented
+   #:local-filename ;; unimplemented
+   #:remote-port ;; unimplemented
+   #:socket-address-family ;; unimplemented
+   #:socket-connect ;; unimplemented
+   #:socket-format ;; unimplemented
+   #:socket-type ;; unimplemented
+
+   ;; Errors
+   #:socket-error
+
+   ;; Allegro SSL API
+   #:get-ssl-peer-certificate ;; unimplemented
+   #:get-ssl-verify-result ;; unimplemented, needed
+   #:make-ssl-client-context ;; unimplemented, needed
+   #:make-ssl-client-stream ;; needs context
+   #:make-ssl-server-context ;; unimplemented, needed
+   #:make-ssl-server-stream ;; needs context
+   #:ssl-do-handshake ;; unimplemented needed
+
+   #:x509-certificate ;; unimplemented, class
+   #:x509-certificate-issuer ;; unimplemented
+   #:x509-certificate-not-after ;; unimplemented
+   #:x509-certificate-not-before ;; unimplemented
+   #:x509-certificate-serial-number ;; unimplemented
+   #:x509-certificate-subject ;; unimplemented, needed
+   #:x509-certificate-subject-alt-name ;; unimplemented
+   #:x509-certificate-version ;; unimplemented
+   ))
 
 (defpackage #:user
   (:use #:cl

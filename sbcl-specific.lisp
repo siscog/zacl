@@ -6,7 +6,7 @@
   (fd-stream-fd stream))
 
 (defun fstat-size (fd)
-  (let ((stat (sb-posix:fstat fd)))
+  (let ((stat (sb-posix:fstat (fd))))
     (sb-posix:stat-size stat)))
 
 (defun fstat-mtime (fd)
@@ -16,6 +16,10 @@
 (defun stat-mtime (file)
   (let ((stat (sb-posix:stat file)))
     (sb-posix:stat-mtime stat)))
+
+(defun stat-size (file)
+  (let ((stat (sb-posix:stat file)))
+    (sb-posix:stat-size stat)))
 
 (defun file-kind (pathname)
   (sb-impl::native-file-kind pathname))
