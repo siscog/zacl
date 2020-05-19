@@ -126,7 +126,7 @@
 
 (defmethod enable ((process process))
   (push :enable (run-reasons process))
-  (start process))
+  (maybe-start process))
 
 (defmethod killedp ((process process))
   (eql (state process) :killed))
@@ -194,9 +194,9 @@
                     (copy-list name-or-keywords)
                     (list :name name-or-keywords)))
          (process (apply #'%make-process plist)))
+    (push :enable (run-reasons process))
     (apply #'preset process function arguments)
     (setf (reset-action process) nil)
-    (enable process)
     process))
 
 (defun current-process ()
