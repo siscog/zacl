@@ -88,7 +88,7 @@
 
 (defun decode-chunked-data (sequence)
   (excl:with-output-to-buffer (stream)
-    (flexi-streams:with-input-from-sequence (outer sequence)
+    (babel-streams:with-input-from-sequence (outer sequence)
       (let ((inner (make-instance 'net.aserve::unchunking-stream
                                   :input-handle outer
                                   :external-format :latin1))
@@ -190,7 +190,7 @@
                                  :query (list (cons variable test-string))))))))
 
 ;; Needed for SBCL's handling of stream-external-format
-(defmethod zacl-cl:stream-external-format ((stream flexi-streams:vector-stream))
+(defmethod zacl-cl:stream-external-format ((stream babel-streams::vector-stream))
   nil)
 
 (test unchunking-stream
@@ -203,7 +203,7 @@
                                           encoded :crlf
                                           ;; chunked eof
                                           "0" :crlf)))
-    (flexi-streams:with-input-from-sequence (stream chunked-data)
+    (babel-streams:with-input-from-sequence (stream chunked-data)
       (let ((s (make-instance 'net.aserve::unchunking-stream
                               :external-format :latin1
                               :input-handle stream))

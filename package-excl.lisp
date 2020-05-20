@@ -197,14 +197,14 @@ values otherwise."
      ,@body))
 
 (defun excl:native-string-sizeof (string &key (external-format :latin1))
-  (length (string-to-octets string :external-format (translate-external-format external-format))))
+  (length (string-to-octets string :encoding (translate-external-format external-format))))
 
 (defun excl:string-to-mb (string &key external-format mb-vector null-terminate)
   (when null-terminate
     (error "Cannot null-terminate"))
   (let ((result
          (string-to-octets string
-                           :external-format (translate-external-format external-format))))
+                           :encoding (translate-external-format external-format))))
     (if mb-vector
         (replace mb-vector result)
         result)))
@@ -213,12 +213,12 @@ values otherwise."
   (when null-terminate
     (error "No null terminating!"))
   (string-to-octets string
-                    :external-format (translate-external-format external-format)))
+                    :encoding (translate-external-format external-format)))
 
 (defun excl:mb-to-string (string &key external-format (start 0)
                                    (end (length string)))
   (octets-to-string string
-                    :external-format (translate-external-format external-format)
+                    :encoding (translate-external-format external-format)
                     :start start
                     :end end))
 
@@ -230,7 +230,7 @@ values otherwise."
   (octets-to-string octets
                     :start start
                     :end end
-                    :external-format (translate-external-format external-format)))
+                    :encoding (translate-external-format external-format)))
 
 (defun excl:schedule-finalization (object fun)
   ;; Doesn't work; semantics differ.
@@ -386,7 +386,7 @@ values otherwise."
   (unless start (setf start 0))
   (unless end (setf end (length string)))
   (let ((buffer (string-to-octets string :start start :end end
-                                  :external-format (zacl-cl:stream-external-format stream))))
+                                  :encoding (zacl-cl:stream-external-format stream))))
     (excl:device-write stream buffer 0 (length buffer) nil)))
 
 (defmethod stream-write-sequence ((stream excl:single-channel-simple-stream) sequence start end &key &allow-other-keys)
@@ -412,7 +412,7 @@ values otherwise."
           (error "Can't handle buffering yet"))
         (let ((string (octets-to-string buffer
                                         :end result
-                                        :external-format (zacl-cl:stream-external-format stream))))
+                                        :encoding (zacl-cl:stream-external-format stream))))
           (replace sequence string :start1 start :end1 end)
           (min end (+ start (length string)))))
       (let ((result (excl:device-read stream sequence start end nil)))
@@ -433,7 +433,7 @@ values otherwise."
           (error "Can't handle buffering yet"))
         (let ((string (octets-to-string buffer
                                         :end result
-                                        :external-format (zacl-cl:stream-external-format stream))))
+                                        :encoding (zacl-cl:stream-external-format stream))))
           (replace sequence string :start1 start :end1 end)
           (min end (+ start (length string)))))
       (let ((result (excl:device-read stream sequence start end nil)))
@@ -495,7 +495,7 @@ values otherwise."
 (defun excl:md5-update (state data &key (start 0) end external-format)
   (when (stringp data)
     (setf data (string-to-octets data
-                                 :external-format (or external-format :latin-1)
+                                 :encoding (or external-format :latin-1)
                                  :start start
                                  :end (or end (length data))))
     (setf start 0)
@@ -532,7 +532,7 @@ values otherwise."
     (let ((octets
            (with-output-to-sequence (s)
              (store object stream))))
-      (write-string (octets-to-string octets :external-format :latin-1) stream))))
+      (write-string (octets-to-string octets :encoding :latin-1) stream))))
 
 (defun excl:fasl-read (file)
   (with-open-file (stream file :element-type '(unsigned-byte 8))

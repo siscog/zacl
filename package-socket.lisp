@@ -54,7 +54,7 @@
 (defmethod stream-write-char ((stream zacl-socket) char)
   (map nil (lambda (octet)
              (stream-write-byte stream octet))
-       (string-to-octets (string char) :external-format (socket-ef stream))))
+       (string-to-octets (string char) :encoding (socket-ef stream))))
 
 (defmethod stream-write-sequence :after ((stream zacl-socket) sequence
                                          start end &key &allow-other-keys)
@@ -71,7 +71,7 @@
                                   &key &allow-other-keys)
   (when (typep sequence 'string)
     (setf sequence (string-to-octets sequence :start start :end end
-                                     :external-format (socket-ef stream)))
+                                     :encoding (socket-ef stream)))
     (setf start 0)
     (setf end (length sequence)))
   (write-sequence sequence (real-stream stream) :start start :end end))
@@ -99,7 +99,7 @@
             (buffer (make-array (- end start) :element-type '(unsigned-byte 8))))
         (let* ((after-index (read-sequence buffer (real-stream stream)))
                (string (octets-to-string buffer :start 0 :end after-index
-                                         :external-format :latin-1)))
+                                         :encoding :latin-1)))
           (replace sequence string :start1 start :end1 end
                    :start2 0 :end2 after-index)
           (+ offset after-index)))
@@ -114,7 +114,7 @@
             (buffer (make-array (- end start) :element-type '(unsigned-byte 8))))
         (let* ((after-index (read-sequence buffer (real-stream stream)))
                (string (octets-to-string buffer :start 0 :end after-index
-                                         :external-format :latin-1)))
+                                         :encoding :latin-1)))
           (replace sequence string :start1 start :end1 end
                    :start2 0 :end2 after-index)
           (+ offset after-index)))

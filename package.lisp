@@ -47,11 +47,12 @@
                 #:finalize-md5-state)
   (:import-from #:split-sequence
                 #:split-sequence)
-  (:import-from #:flexi-streams
-                #:with-output-to-sequence
-                #:get-output-stream-sequence
-                #:string-to-octets
+  (:import-from #:babel
+		#:string-to-octets
                 #:octets-to-string)
+  (:import-from #:babel-streams
+                #:with-output-to-sequence
+                #:get-output-stream-sequence)
   (:import-from #:usocket
                 #:socket-listen
                 #:socket-accept
