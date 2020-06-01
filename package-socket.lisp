@@ -28,9 +28,11 @@
                        fundamental-character-input-stream)
   ((socket
     :initarg :socket
+    :initform nil
     :reader socket)
    (real-stream
     :initarg :real-stream
+    :initform nil
     :accessor real-stream
     :reader underlying-input-stream
     :reader underlying-output-stream)
@@ -43,6 +45,21 @@
     :initform :latin-1
     :reader socket-ef
     :accessor zacl-cl:stream-external-format)))
+
+(defmethod print-object ((object zacl-socket) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (let ((socket (socket object)))
+      (if (real-stream object)
+	  (format stream
+		  "connected from ~a:~a to ~a:~a"
+		 (get-local-address socket)
+		 (get-local-port socket)
+		 (get-peer-address socket)
+		 (get-peer-port socket))
+	  (format stream
+		  "waiting for connection at ~a:~a"
+		 (get-local-address socket)
+		 (get-local-port socket))))))
 
 (defmethod stream-write-byte :after ((stream zacl-socket) byte)
   (declare (ignore byte))
