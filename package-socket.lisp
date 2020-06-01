@@ -153,13 +153,14 @@
   (ecase connect
     (:passive
      (let ((socket
-            (socket-listen local-host local-port
+            (socket-listen local-host (or local-port 0)
                            :reuseaddress reuse-address
                            :element-type '(unsigned-byte 8)
                            :backlog backlog)))
        (make-instance 'zacl-socket
                       :socket socket)))
-    ((nil)
+
+    ((nil :active)
      (let ((socket
             (socket-connect remote-host remote-port
                             :nodelay nodelay
