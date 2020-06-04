@@ -111,7 +111,12 @@ longer anonymous, but has a meaningful name name."
 
 ;;; Misc
 
-(defstruct excl::ssl-context)
+(defstruct (excl::ssl-context
+	    (:constructor excl::make-ssl-context))
+  (open-ssl-context nil)
+  (key nil)
+  (key-password nil)
+  (certificate nil))
 
 (defmacro excl::.atomically (&body body)
   `(progn ,@body))

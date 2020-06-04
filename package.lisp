@@ -14,10 +14,13 @@
   #+sbcl
   (:import-from #:usocket
 		#:get-host-by-name)
-  
+
   (:import-from #:cl+ssl
                 #:make-ssl-client-stream
-                #:make-ssl-server-stream)
+                #:make-ssl-server-stream
+		#:with-global-context
+		#:make-context
+		#:use-certificate-chain-file)
   #+ccl
   (:import-from #:ccl
                 #:without-interrupts
@@ -61,6 +64,7 @@
                 #:get-local-port
                 #:socket-option
                 #:get-peer-address
+		#:get-peer-port
                 #:usocket-p
                 #:usocket
                 #:stream-usocket

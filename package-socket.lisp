@@ -249,11 +249,21 @@
                                          certificate key certificate-password
                                          verify
                                          ca-file ca-directory crl-file crl-check method max-depth)
-  (declare (ignore max-depth method crl-check crl-file ca-directory ca-file verify))
-  (let ((stream (make-ssl-server-stream (real-stream socket)
-					:certificate certificate
-					:key (or key certificate)
-					:password certificate-password)))
+  (declare (ignore max-depth method verify))
+  (when (and context
+	     (or certificate key ca-file ca-directory certificate-password crl-file crl-check))
+    (error "Cannot supply both a CONTEXT and one of CERTIFICATE, KEY, CA-FILE, CA-DIRECTORY, CERTIFICATE-PASSWORD, CRL-FILE, or CRL-CHECK."))
+  (let ((stream (if context
+		    (with-global-context ((ssl-context-open-ssl-context context))
+		      (let ((arguments nil))
+			(setf (getf arguments :key) (or key (ssl-context-certificate context)))
+			(alexandria:when-let (key-password (ssl-context-key-password context))
+			  (setf (getf arguments :password) key-password))
+			(apply #'make-ssl-server-stream (real-stream socket) arguments)))
+		    (make-ssl-server-stream (real-stream socket)
+					    :certificate certificate
+					    :key (or key certificate)
+					    :password certificate-password))))
     (setf (real-stream socket) stream)
     socket))
 
@@ -261,39 +271,125 @@
   (declare (ignore socket read-timeout write-timeout))
   nil)
 
-(defun socket:make-ssl-server-context (&key (method :tlsv1+)
+(defun make-ssl-context (&key method
+			      certificate
+			      key
+			      certificate-password
+			      verify
+			      max-depth
+			      ca-file
+			      ca-directory
+			      ciphers)
+  (let ((arguments (list)))
+    (when method
+      (if (listp method)
+	  (error "Specifying a list of enabled SSL Methods is unsupported at the time.")
+	  (ecase method
+	    (:tlsv1+) ;; the default for CL+SSL: TLS-method
+	    (:sslv3+
+	     (warn "SSL v3 is deprecated and should not be used. Defaulting to TLS v1+ methods."))
+	    (:sslv23
+	     (error "SSL v2 is an unsecure protocol."))
+	    (:sslv2
+	     (error "SSL v2 is an unsecure protocol."))
+	    (:sslv3
+	     (warn "SSL v3 is deprecated and should not be used.")
+	     (setf (getf arguments :method) (cl+ssl::ssl-v3-method)))
+	    (:tlsv1
+	     (setf (getf arguments :method) (cl+ssl::ssl-TLSv1-method))))))
+    (when ciphers
+      (unless (stringp ciphers) (error "Argument CIPHERS must be a string"))
+      (setf (getf arguments :cipher-list) ciphers))
+    ;; Verification documentation: https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_verify.html
+    (if verify
+	(ecase verify
+	  (:optional
+	   (setf (getf arguments :verify-mode)
+		 cl+ssl::+SSL-VERIFY-PEER+))
+	  (:required
+	   (setf (getf arguments :verify-mode)
+		 (logior cl+ssl::+SSL-VERIFY-PEER+
+			 cl+ssl::+SSL-VERIFY-FAIL-IF-NO-PEER-CERT+))))
+	(setf (getf arguments :verify-mode)
+	      cl+ssl::+SSL-VERIFY-NONE+))
+    (when (and ca-file
+	       (pathnamep ca-file))
+      (setf ca-file (namestring ca-file)))
+    (when (and ca-directory
+	       (pathnamep ca-directory))
+      (setf ca-directory (namestring ca-directory)))
+    (cond ((and ca-file ca-directory)
+	   (setf (getf arguments :verify-location) (list ca-file ca-directory)))
+	  (ca-file (setf (getf arguments :verify-location) ca-file))
+	  (ca-directory (setf (getf arguments :verify-location) ca-directory)))
+    (when max-depth
+      (setf (getf arguments :verify-depth) max-depth))
+    (when (and certificate
+	       (pathnamep certificate))
+      (setf certificate (namestring certificate)))
+    (when (and key
+	       (pathnamep key))
+      (setf key (namestring key)))
+    (let ((context (apply #'make-context arguments)))
+      (when certificate
+	(with-global-context (context)
+	  (use-certificate-chain-file certificate)))
+      (excl::make-ssl-context :open-ssl-context context
+			      :certificate certificate
+			      :key key
+			      :key-password certificate-password))))
+
+(defun socket:make-ssl-server-context (&rest args
+				       &key (method :tlsv1+)
 					    certificate
 					    key
 					    certificate-password
-					    verify
+					    (verify nil)
 					    (max-depth 10)
 					    ca-file
 					    ca-directory
 					    ciphers
 					    crl-check
 					    crl-file
-					    (prefer-server-cipher-order t)
+					    prefer-server-cipher-order
 					    server-name)
-  (declare (ignore server-name))
-  (error "unimplemented")
-  (apply #'cl+ssl:make-context
-	 (loop for (k v)
-		 on (list :method nil
-			  (:options (list +SSL-OP-ALL+))
-			  (:session-cache-mode +ssl-sess-cache-server+)
-			  (:verify-location :default)
-			  :verify-depth max-depth
-			  (:verify-mode +ssl-verify-peer+)
-			  (:verify-callback nil verify-callback-supplied-p)
-			  (:cipher-list +default-cipher-list+)
-			  (:pem-password-callback 'pem-password-callback))
-	       by #'cddr
-	       when v
-		 collect k and collect v)))
+  (declare (ignore certificate key certificate-password
+		   ca-file ca-directory ciphers))
+  (when (or crl-check
+	    crl-file
+	    prefer-server-cipher-order
+	    server-name)
+    (error "The arguments CRL-CHECK, CRL-FILE, PREFER-SERVER-CIPHER-ORDER, and SERVER-NAME are unsupported at the moment."))
+  ;; Don't loose the defaults
+  (setf (getf args :method) method)
+  (setf (getf args :verify) verify)
+  (setf (getf args :max-depth) max-depth)
+  (apply #'make-ssl-context args))
 
-(defun socket:make-ssl-client-context (&rest args)
-  (declare (ignore args))
-  (error "unimplemented"))
+(defun socket:make-ssl-client-context (&rest args
+				       &key (method :tlsv1+)
+					    certificate
+					    key
+					    certificate-password
+					    (verify :optional)
+					    (max-depth 10)
+					    ca-file
+					    ca-directory
+					    ciphers
+					    crl-check
+					    crl-file
+					    prefer-server-cipher-order)
+  (declare (ignore certificate key certificate-password
+		   ca-file ca-directory ciphers))
+  (when (or crl-check
+	    crl-file
+	    prefer-server-cipher-order)
+    (error "The arguments CRL-CHECK, CRL-FILE, and PREFER-SERVER-CIPHER-ORDER are unsupported at the moment."))
+  ;; Don't loose the defaults
+  (setf (getf args :method) method)
+  (setf (getf args :verify) verify)
+  (setf (getf args :max-depth) max-depth)
+  (apply #'make-ssl-context args))
 
 (defun socket:get-ssl-verify-result (&rest args)
   (declare (ignore args))
