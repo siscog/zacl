@@ -391,14 +391,29 @@
   (setf (getf args :max-depth) max-depth)
   (apply #'make-ssl-context args))
 
-(defun socket:get-ssl-verify-result (&rest args)
-  (declare (ignore args))
-  (error "unimplemented"))
+(defun socket:get-ssl-verify-result (ssl-stream)
+  (cl+ssl::ssl-get-verify-result
+   (cl+ssl::ssl-stream-handle
+    (real-stream ssl-stream))))
 
-(defun socket:x509-certificate-subject (&rest args)
-  (declare (ignore args))
-  (error "unimplemented"))
+(defun socket:get-ssl-peer-certificate (ssl-stream)
+  (cl+ssl::ssl-get-peer-certificate
+   (cl+ssl::ssl-stream-handle
+    (real-stream ssl-stream))))
 
-(defun get-ssl-peer-certificate (&rest args)
-  (declare (ignore args))
-  (error "unimplemented"))
+(defun socket:x509-certificate-subject (x509-certificate)
+  (let ((subject-one-liner
+	  (unless (cffi:null-pointer-p x509-certificate)
+	    (cffi:with-foreign-pointer (buf 1024)
+	      (let ((subject-name (cl+ssl::x509-get-subject-name x509-certificate)))
+		(unless (cffi:null-pointer-p subject-name)
+		  (cl+ssl::x509-name-oneline subject-name buf 1024)
+		  (cffi:foreign-string-to-lisp buf)))))))
+    (mapcar (lambda (element)
+	      (let ((splitted (uiop:split-string element
+						 :separator '(#\=))))
+		(cons (first splitted)
+		      (second splitted))))
+	    (remove "" (uiop:split-string subject-one-liner
+					  :separator '(#\/))
+		    :test #'string=))))

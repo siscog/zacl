@@ -295,12 +295,12 @@
    #:socket-error
 
    ;; Allegro SSL API
-   #:get-ssl-peer-certificate ;; unimplemented
-   #:get-ssl-verify-result ;; unimplemented, needed
-   #:make-ssl-client-context ;; unimplemented, needed
-   #:make-ssl-client-stream ;; needs context
-   #:make-ssl-server-context ;; unimplemented, needed
-   #:make-ssl-server-stream ;; needs context
+   #:get-ssl-peer-certificate
+   #:get-ssl-verify-result
+   #:make-ssl-client-context
+   #:make-ssl-client-stream
+   #:make-ssl-server-context
+   #:make-ssl-server-stream
    #:ssl-do-handshake ;; unimplemented needed
 
    #:x509-certificate ;; unimplemented, class
@@ -308,7 +308,7 @@
    #:x509-certificate-not-after ;; unimplemented
    #:x509-certificate-not-before ;; unimplemented
    #:x509-certificate-serial-number ;; unimplemented
-   #:x509-certificate-subject ;; unimplemented, needed
+   #:x509-certificate-subject
    #:x509-certificate-subject-alt-name ;; unimplemented
    #:x509-certificate-version ;; unimplemented
    ))
