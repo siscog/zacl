@@ -340,6 +340,12 @@ values otherwise."
                             :initial-element byte)))
     (excl:device-write stream buffer 0 1 nil)))
 
+(defmethod trivial-gray-streams:stream-fresh-line ((stream zacl-simple-stream))
+  ;; This always prints a newline has we have no idea how to determine if we
+  ;; are in the a new line or not
+  (trivial-gray-streams:stream-terpri stream)
+  t)
+
 (defclass excl:single-channel-simple-stream (zacl-simple-stream)
   ((excl::buffer
     :initform (make-array 1024 :element-type '(unsigned-byte 8))
