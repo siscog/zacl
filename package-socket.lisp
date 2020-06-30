@@ -237,35 +237,109 @@
   ;;
   #+sbcl (format nil "~{~a~^.~}" (coerce (get-host-by-name name) 'list)))
 
+(defun make-ssl-stream (socket stream-type &key context
+						method
+						certificate key certificate-password
+						max-depth
+						ca-file ca-directory
+						ciphers
+						crl-check crl-file
+						verify
+						server-name)
+  (declare (ignore crl-check crl-file))
+  (ecase stream-type
+    ((:client :server)))
 
-(defun socket::make-ssl-client-stream (socket &key &allow-other-keys)
-  (let ((stream (make-ssl-client-stream (real-stream socket))))
-    (setf (real-stream socket) stream)
-    socket))
+  (when (and ca-file
+	     (pathnamep ca-file))
+    (setf ca-file (namestring ca-file)))
+  (when (and ca-directory
+	     (pathnamep ca-directory))
+    (setf ca-directory (namestring ca-directory)))
 
-(defun socket::make-ssl-server-stream (socket
-                                       &key
-					 context
-                                         certificate key certificate-password
-                                         verify
-                                         ca-file ca-directory crl-file crl-check method max-depth)
-  (declare (ignore max-depth method verify))
-  (when (and context
-	     (or certificate key ca-file ca-directory certificate-password crl-file crl-check))
-    (error "Cannot supply both a CONTEXT and one of CERTIFICATE, KEY, CA-FILE, CA-DIRECTORY, CERTIFICATE-PASSWORD, CRL-FILE, or CRL-CHECK."))
   (let ((stream (if context
 		    (with-global-context ((ssl-context-open-ssl-context context))
 		      (let ((arguments nil))
 			(setf (getf arguments :key) (or key (ssl-context-certificate context)))
 			(alexandria:when-let (key-password (ssl-context-key-password context))
 			  (setf (getf arguments :password) key-password))
-			(apply #'make-ssl-server-stream (real-stream socket) arguments)))
-		    (make-ssl-server-stream (real-stream socket)
-					    :certificate certificate
-					    :key (or key certificate)
-					    :password certificate-password))))
+			(when (eq stream-type :client)
+			  (when verify
+			    (setf (getf arguments :verify) verify))
+			  (when server-name
+			    (setf (getf arguments :hostname) server-name)))
+			(apply (if (eq stream-type :client)
+				   #'make-ssl-client-stream
+				   #'make-ssl-server-stream)
+			       (real-stream socket)
+			       arguments)))
+		    (with-global-context ((ssl-context-open-ssl-context (if (eq stream-type :client)
+									    (make-ssl-context
+									     :method method
+									     :max-depth max-depth
+									     :ca-file ca-file
+									     :certificate certificate
+									     :key key
+									     :certificate-password certificate-password
+									     :verify verify
+									     :max-depth max-depth
+									     :ca-file ca-file
+									     :ca-directory ca-directory
+									     :ciphers ciphers)
+									    (make-ssl-context
+									     :method method
+									     :max-depth max-depth
+									     :ca-file ca-file
+									     :certificate certificate
+									     :key key
+									     :certificate-password certificate-password
+									     :verify verify
+									     :max-depth max-depth
+									     :ca-file ca-file
+									     :ca-directory ca-directory)))
+					  :auto-free-p t)
+		      (if (eq stream-type :client)
+			  (make-ssl-client-stream (real-stream socket)
+						  :certificate certificate
+						  :key (or key certificate)
+						  :password certificate-password
+						  :verify verify
+						  :hostname server-name)
+			  (make-ssl-server-stream (real-stream socket)
+					      :certificate certificate
+					      :key (or key certificate)
+					      :password certificate-password))))))
     (setf (real-stream socket) stream)
     socket))
+
+(defun socket::make-ssl-client-stream (socket
+				       &rest args
+				       &key context
+					    method
+					    ciphers
+					    certificate key certificate-password
+					    verify max-depth server-name
+					    ca-file ca-directory
+					    crl-check crl-file)
+  (declare (ignorable method ciphers verify max-depth server-name))
+  (when (and context
+	     (or certificate key ca-file ca-directory certificate-password crl-file crl-check))
+    (error "Cannot supply both a CONTEXT and one of CERTIFICATE, KEY, CA-FILE, CA-DIRECTORY, CERTIFICATE-PASSWORD, CRL-FILE, or CRL-CHECK."))
+  (apply #'make-ssl-stream socket :client args))
+
+(defun socket::make-ssl-server-stream (socket
+                                       &rest args
+				       &key context
+					    method
+                                            certificate key certificate-password
+                                            verify max-depth
+                                            ca-file ca-directory
+					    crl-file crl-check)
+  (declare (ignorable method verify max-depth))
+  (when (and context
+	     (or certificate key ca-file ca-directory certificate-password crl-file crl-check))
+    (error "Cannot supply both a CONTEXT and one of CERTIFICATE, KEY, CA-FILE, CA-DIRECTORY, CERTIFICATE-PASSWORD, CRL-FILE, or CRL-CHECK."))
+  (apply #'make-ssl-stream socket :server args))
 
 (defun socket:socket-control (socket &key read-timeout write-timeout)
   (declare (ignore socket read-timeout write-timeout))
