@@ -6,7 +6,7 @@
   (fd-stream-fd stream))
 
 (defun fstat-size (fd)
-  (let ((stat (sb-posix:fstat (fd))))
+  (let ((stat (sb-posix:fstat fd)))
     (sb-posix:stat-size stat)))
 
 (defun fstat-mtime (fd)
