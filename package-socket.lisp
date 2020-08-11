@@ -260,7 +260,8 @@
   (let ((stream (if context
 		    (with-global-context ((ssl-context-open-ssl-context context))
 		      (let ((arguments nil))
-			(setf (getf arguments :key) (or key (ssl-context-certificate context)))
+			(setf (getf arguments :certificate) (or certificate (ssl-context-certificate context)))
+			(setf (getf arguments :key) (or key (ssl-context-key context)))
 			(alexandria:when-let (key-password (ssl-context-key-password context))
 			  (setf (getf arguments :password) key-password))
 			(when (eq stream-type :client)
