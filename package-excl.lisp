@@ -42,10 +42,6 @@ longer anonymous, but has a meaningful name name."
 (defun excl:featurep (feature)
   (find feature *features*))
 
-
-(defmacro excl::fast (&body body)
-  `(progn ,@body))
-
 (defun excl:gc (&optional full)
   (declare (ignorable full))
   #+ccl
@@ -109,6 +105,45 @@ longer anonymous, but has a meaningful name name."
 (defmethod excl:stream-error-code (condition)
   (socket-error-code condition))
 
+;;; Concurrency
+
+;; FIXME: apparently using EXCL::FAST and EXCL::ATOMICALLY produces the same result
+;; as EXCL:FAST-AND-CLEAN which in turn is a performant version of
+;; EXCL:WITH-DELAYD-INTERRUPTS
+;; https://franz.com/support/documentation/current/doc/operators/excl/fast-and-clean.htm
+;; Additionally, not only these symbols not exported but they are also undocumented and
+;; used unrestrainedly across ZACL and ZASERVE in all kinds of combinations...
+(defmacro excl::fast (&body body)
+  `(progn ,@body))
+
+(defmacro excl::.atomically (&body body)
+  `(progn ,@body))
+
+(defmacro excl::atomically (&body body)
+  `(progn ,@body))
+
+(defmacro excl:atomic-conditional-setf (place new-value old-value)
+  #-sbcl (declare (ignore old-value))
+  ;; ATTENTION: the arguments in SB-EXT:COMPARE-AND-SWAP have a different order
+  #+sbcl `(sb-ext:compare-and-swap ,place ,old-value ,new-value)
+  #-sbcl `(setf ,place ,new-value))
+
+(defmacro excl:incf-atomic (place &optional (delta 1))
+  #+sbcl `(sb-ext:atomic-incf ,place ,delta)
+  #-sbcl `(incf ,place ,delta))
+
+(defmacro excl:decf-atomic (place &optional (delta 1))
+  #+sbcl `(sb-ext:atomic-decf ,place ,delta)
+  #-sbcl `(decf ,place ,delta))
+
+(defmacro excl:pop-atomic (place)
+  #+sbcl `(sb-ext:atomic-pop ,place)
+  #-sbcl `(pop ,place))
+
+(defmacro excl:push-atomic (value place)
+  #+sbcl `(sb-ext:atomic-push ,value ,place)
+  #-sbcl `(push ,value ,place))
+
 ;;; Misc
 
 (defstruct (excl::ssl-context
@@ -117,13 +152,6 @@ longer anonymous, but has a meaningful name name."
   (key nil)
   (key-password nil)
   (certificate nil))
-
-(defmacro excl::.atomically (&body body)
-  `(progn ,@body))
-
-(defmacro excl:atomic-conditional-setf (place new-value old-value)
-  (declare (ignore old-value))
-  `(setf ,place ,new-value))
 
 (defmacro excl:errorset (form &optional announce catch-breaks)
   "Return NIL if FORM signals an error, T and values as multiple
@@ -290,14 +318,6 @@ values otherwise."
 (defmacro excl:with-locked-structure ((struct &key block non-smp) &body body)
   (declare (ignore block non-smp))
   `(call-with-locked-structure ,struct (lambda () ,@body)))
-
-(defmacro excl:incf-atomic (place &optional (delta 1))
-  ;; XXX FIXME
-  `(incf ,place ,delta))
-
-(defmacro excl:decf-atomic (place &optional (delta 1))
-  ;; XXX FIXME
-  `(decf ,place (- ,delta)))
 
 (defstruct (basic-lock (:include excl:synchronizing-structure))
   name)
@@ -490,13 +510,6 @@ values otherwise."
   (declare (ignore socket))
   (or set
       42))
-
-(defmacro excl:pop-atomic (place)
-  `(pop ,place))
-
-(defmacro excl:push-atomic (value place)
-  `(push ,value ,place ))
-
 
 ;;; MD5
 
