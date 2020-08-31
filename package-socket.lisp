@@ -261,7 +261,12 @@
 		    (with-global-context ((ssl-context-open-ssl-context context))
 		      (let ((arguments nil))
 			(setf (getf arguments :certificate) (or certificate (ssl-context-certificate context)))
-			(setf (getf arguments :key) (or key (ssl-context-key context)))
+			(setf (getf arguments :key) (or key
+							(ssl-context-key context)
+							;; CL+SSL fails to automatically extract the private key
+							;; from PEM certificates, therefore we must point the
+							;; key to the certificate if no key is specified
+							(ssl-context-certificate context)))
 			(alexandria:when-let (key-password (ssl-context-key-password context))
 			  (setf (getf arguments :password) key-password))
 			(when (eq stream-type :client)
