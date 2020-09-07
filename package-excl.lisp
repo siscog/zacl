@@ -345,29 +345,20 @@ values otherwise."
 
 (defclass zacl-simple-stream (fundamental-binary-output-stream
                               fundamental-binary-input-stream)
-  ())
+  (
+   ;; The original SIMPLE-STREAMs in ACL contain only one buffer that is used
+   ;; interchangeably between output and input in SINGLE-CHANNEL-SIMPLE-STREAMs
+   ;; according to its MODE
+   ;; For simplicity's sake, we use an additional buffer for output and keep
+   ;; the original one for input.
+   (output-buffer
+    :initform (make-array 4096 :element-type '(unsigned-byte 8))
+    :accessor zacl-simple-stream-output-buffer)
+   (output-pointer
+    :initform 0
+    :accessor zacl-simple-stream-output-pointer)
 
-;; Needed for SBCL
-(defmethod stream-element-type ((stream zacl-simple-stream))
-  '(unsigned-byte 8))
-
-(defmethod stream-write-char ((stream zacl-simple-stream) char)
-  (let ((buffer (string-to-octets (string char))))
-    (excl:device-write stream buffer 0 (length buffer) nil)))
-
-(defmethod stream-write-byte ((stream zacl-simple-stream) byte)
-  (let ((buffer (make-array 1 :element-type '(unsigned-byte 8)
-                            :initial-element byte)))
-    (excl:device-write stream buffer 0 1 nil)))
-
-(defmethod trivial-gray-streams:stream-fresh-line ((stream zacl-simple-stream))
-  ;; This always prints a newline has we have no idea how to determine if we
-  ;; are in the a new line or not
-  (trivial-gray-streams:stream-terpri stream)
-  t)
-
-(defclass excl:single-channel-simple-stream (zacl-simple-stream)
-  ((excl::buffer
+   (excl::buffer
     :initform (make-array 1024 :element-type '(unsigned-byte 8))
     :reader buffer)
    (excl::output-handle
@@ -384,74 +375,20 @@ values otherwise."
     :initform :latin1
     :accessor zacl-cl:stream-external-format)))
 
-(defmethod shared-initialize :after ((stream
-                                      excl:single-channel-simple-stream)
+(defmethod shared-initialize :after ((stream zacl-simple-stream)
                                      slot-names
-                                     &rest initargs &key &allow-other-keys)
+                                     &rest initargs
+				     &key &allow-other-keys)
   (excl:device-open stream slot-names initargs))
 
-(defmethod close ((stream excl:single-channel-simple-stream) &key abort)
+(defmethod close ((stream zacl-simple-stream) &key abort)
   (excl:device-close stream abort))
 
+;; Needed for SBCL
+(defmethod stream-element-type ((stream zacl-simple-stream))
+  '(unsigned-byte 8))
 
-
-(defgeneric underlying-output-stream (stream)
-  (:method ((stream excl:single-channel-simple-stream))
-    (underlying-output-stream (slot-value stream 'excl::output-handle)))
-  (:method ((stream stream-usocket))
-    (socket-stream stream))
-  (:method ((stream usocket))
-    (socket-stream stream))
-  (:method ((stream stream))
-    stream))
-
-(defgeneric underlying-input-stream (stream)
-  (:method ((stream excl:single-channel-simple-stream))
-    (underlying-input-stream (slot-value stream 'excl::input-handle)))
-  (:method ((stream usocket))
-    (socket-stream stream))
-  (:method ((stream stream))
-    stream))
-
-(defmethod stream-write-string ((stream excl:single-channel-simple-stream) string &optional start end)
-  (unless start (setf start 0))
-  (unless end (setf end (length string)))
-  (let ((buffer (string-to-octets string :start start :end end
-                                  :encoding (zacl-cl:stream-external-format stream))))
-    (excl:device-write stream buffer 0 (length buffer) nil)))
-
-(defmethod stream-write-sequence ((stream excl:single-channel-simple-stream) sequence start end &key &allow-other-keys)
-  (excl:device-write stream sequence start end nil)
-  sequence)
-
-#+ccl
-(defmethod ccl:stream-write-vector ((stream excl:single-channel-simple-stream) sequence start end)
-  (unless start (setf start 0))
-  (unless end (setf end (length sequence)))
-  (excl:device-write stream sequence start end nil))
-
-#+ccl
-(defmethod ccl:stream-read-vector ((stream excl:single-channel-simple-stream) sequence start end)
-  (unless start (setf start 0))
-  (unless end (setf end (length sequence)))
-  (if (stringp sequence)
-      (let ((result (excl:device-read stream nil 0 nil nil))
-            (buffer (buffer stream )))
-        (when (minusp result)
-          (return-from ccl:stream-read-vector 0))
-        (when (<= (- end start) result)
-          (error "Can't handle buffering yet"))
-        (let ((string (octets-to-string buffer
-                                        :end result
-                                        :encoding (zacl-cl:stream-external-format stream))))
-          (replace sequence string :start1 start :end1 end)
-          (min end (+ start (length string)))))
-      (let ((result (excl:device-read stream sequence start end nil)))
-        (if (minusp result)
-            0
-            result))))
-
-(defmethod stream-read-sequence ((stream excl:single-channel-simple-stream) sequence start end
+(defmethod stream-read-sequence ((stream zacl-simple-stream) sequence start end
                                  &key &allow-other-keys)
   (unless start (setf start 0))
   (unless end (setf end (length sequence)))
@@ -472,8 +409,107 @@ values otherwise."
             0
             result))))
 
-(defmethod stream-force-output ((stream excl:single-channel-simple-stream))
-  (force-output (underlying-output-stream stream)))
+(defmethod stream-write-char ((stream zacl-simple-stream) char)
+  (stream-write-string stream (string char) 0 1)
+  char)
+
+(defmethod stream-write-byte ((stream zacl-simple-stream) byte)
+  (let ((buffer (zacl-simple-stream-output-buffer stream)))
+    (when (= (length buffer) (zacl-simple-stream-output-pointer stream))
+      (force-output stream))
+    (setf (elt buffer (zacl-simple-stream-output-pointer stream)) byte)
+    (incf (zacl-simple-stream-output-pointer stream)))
+  byte)
+
+(defmethod stream-write-string ((stream zacl-simple-stream) string &optional start end)
+  (let ((sequence (babel:string-to-octets string
+					  :start start
+					  :end end
+					  :encoding (zacl-cl:stream-external-format stream))))
+    (stream-write-sequence stream sequence 0 (length sequence)))
+  string)
+
+(defmethod stream-write-sequence ((stream zacl-simple-stream) (sequence string) start end &key)
+  (stream-write-string stream sequence start end))
+
+(defmethod stream-write-sequence ((stream zacl-simple-stream) sequence start end &key)
+  (let ((buffer (zacl-simple-stream-output-buffer stream)))
+    ;; no space in buffer?
+    (when (> (+ (- end start) (zacl-simple-stream-output-pointer stream))
+	     (length buffer))
+      ;; flush it
+      (stream-force-output stream)
+      ;; the sequence is still bigger than our buffer
+      ;; let's write it directly to the output
+      (when (>= (- end start) (length buffer))
+	(excl:device-write stream sequence start end nil)
+	(return-from stream-write-sequence sequence)))
+    ;; buffer it
+    (replace buffer sequence
+	     :start1 (zacl-simple-stream-output-pointer stream)
+	     :start2 start
+	     :end2 end)
+    (incf (zacl-simple-stream-output-pointer stream) (- end start)))
+  sequence)
+
+(defmethod stream-force-output ((stream zacl-simple-stream))
+  (let ((buffer (zacl-simple-stream-output-buffer stream)))
+    (excl:device-write stream buffer 0 (zacl-simple-stream-output-pointer stream) nil)
+    (setf (zacl-simple-stream-output-pointer stream) 0)))
+
+(defmethod trivial-gray-streams:stream-fresh-line ((stream zacl-simple-stream))
+  ;; This always prints a newline has we have no idea how to determine if we
+  ;; are in the a new line or not
+  (trivial-gray-streams:stream-terpri stream)
+  t)
+
+(defgeneric underlying-output-stream (stream)
+  (:method ((stream zacl-simple-stream))
+    (underlying-output-stream (slot-value stream 'excl::output-handle)))
+  (:method ((stream stream-usocket))
+    (socket-stream stream))
+  (:method ((stream usocket))
+    (socket-stream stream))
+  (:method ((stream stream))
+    stream))
+
+(defgeneric underlying-input-stream (stream)
+  (:method ((stream zacl-simple-stream))
+    (underlying-input-stream (slot-value stream 'excl::input-handle)))
+  (:method ((stream usocket))
+    (socket-stream stream))
+  (:method ((stream stream))
+    stream))
+
+(defclass excl:single-channel-simple-stream (zacl-simple-stream)
+  ())
+
+#+ccl
+(defmethod ccl:stream-write-vector ((stream zacl-simple-stream) sequence start end)
+  (unless start (setf start 0))
+  (unless end (setf end (length sequence)))
+  (excl:device-write stream sequence start end nil))
+
+#+ccl
+(defmethod ccl:stream-read-vector ((stream zacl-simple-stream) sequence start end)
+  (unless start (setf start 0))
+  (unless end (setf end (length sequence)))
+  (if (stringp sequence)
+      (let ((result (excl:device-read stream nil 0 nil nil))
+            (buffer (buffer stream )))
+        (when (minusp result)
+          (return-from ccl:stream-read-vector 0))
+        (when (<= (- end start) result)
+          (error "Can't handle buffering yet"))
+        (let ((string (octets-to-string buffer
+                                        :end result
+                                        :encoding (zacl-cl:stream-external-format stream))))
+          (replace sequence string :start1 start :end1 end)
+          (min end (+ start (length string)))))
+      (let ((result (excl:device-read stream sequence start end nil)))
+        (if (minusp result)
+            0
+            result))))
 
 (defmethod stream-force-output ((stream usocket))
   (force-output (underlying-output-stream stream)))
