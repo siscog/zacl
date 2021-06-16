@@ -328,8 +328,14 @@ values otherwise."
 (define-condition excl:socket-error (error)
   ((identifier
     :initarg :identifier
-    :reader excl:stream-error-identifier)))
-
+    :initform nil
+    :reader excl:stream-error-identifier))
+  (:report (lambda (condition stream)
+	     (write-string (case (excl:stream-error-identifier condition)
+			     (:read-timeout "Timeout while reading from socket")
+			     (:write-timeout "Timeout while writing to socket")
+			     (t "Socket error"))
+			   stream))))
 
 ;;; Streams
 

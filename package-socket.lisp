@@ -44,7 +44,30 @@
     :initarg :external-format
     :initform :latin-1
     :reader socket-ef
-    :accessor zacl-cl:stream-external-format)))
+    :accessor zacl-cl:stream-external-format)
+   #+sbcl
+   (read-timeout
+    :accessor read-timeout
+    :initform nil)
+   #+sbcl
+   (write-timeout
+    :accessor write-timeout
+    :initform nil)))
+
+#+sbcl
+(defun call-with-deadline-maybe (identifier seconds body-fn)
+  (handler-bind
+      ((sb-sys:deadline-timeout
+	 (lambda (e)
+	   (declare (ignore e))
+	   (error 'excl:socket-error :identifier identifier))))
+    (sb-sys:with-deadline (:seconds seconds)
+      (funcall body-fn))))
+
+(defmacro with-deadline-maybe (identifier seconds &body body)
+  #-sbcl (declare (ignore identifier seconds))
+  #-sbcl `(progn ,@body)
+  #+sbcl `(call-with-deadline-maybe ,identifier ,seconds (lambda () ,@body)))
 
 (defmethod print-object ((object zacl-socket) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -91,16 +114,19 @@
                                      :encoding (socket-ef stream)))
     (setf start 0)
     (setf end (length sequence)))
-  (write-sequence sequence (real-stream stream) :start start :end end))
+  (with-deadline-maybe :write-timeout (write-timeout stream)
+    (write-sequence sequence (real-stream stream) :start start :end end)))
 
 (defmethod stream-read-byte ((stream zacl-socket))
-  (read-byte (real-stream stream) nil :eof))
+  (with-deadline-maybe :read-timeout (read-timeout stream)
+    (read-byte (real-stream stream) nil :eof)))
 
 (defmethod stream-read-char ((stream zacl-socket))
-  (let ((byte (read-byte (real-stream stream) nil :eof)))
-    (if (eql byte :eof)
-        :eof
-        (code-char byte))))
+  (with-deadline-maybe :read-timeout (read-timeout stream)
+    (let ((byte (read-byte (real-stream stream) nil :eof)))
+      (if (eql byte :eof)
+	  :eof
+	  (code-char byte)))))
 
 (defmethod stream-read-char-no-hang ((stream zacl-socket))
   (let ((ready (wait-for-input (socket stream) :timeout 0 :ready-only t)))
@@ -111,16 +137,17 @@
                                  &key &allow-other-keys)
   (unless start (setf start 0))
   (unless end (setf end (length sequence)))
-  (if (stringp sequence)
-      (let ((offset start)
-            (buffer (make-array (- end start) :element-type '(unsigned-byte 8))))
-        (let* ((after-index (read-sequence buffer (real-stream stream)))
-               (string (octets-to-string buffer :start 0 :end after-index
-                                         :encoding :latin-1)))
-          (replace sequence string :start1 start :end1 end
-                   :start2 0 :end2 after-index)
-          (+ offset after-index)))
-      (read-sequence sequence (real-stream stream) :start start :end end)))
+  (with-deadline-maybe :read-timeout (read-timeout stream)
+    (if (stringp sequence)
+	(let ((offset start)
+	      (buffer (make-array (- end start) :element-type '(unsigned-byte 8))))
+	  (let* ((after-index (read-sequence buffer (real-stream stream)))
+		 (string (octets-to-string buffer :start 0 :end after-index
+						  :encoding :latin-1)))
+	    (replace sequence string :start1 start :end1 end
+				     :start2 0 :end2 after-index)
+	    (+ offset after-index)))
+	(read-sequence sequence (real-stream stream) :start start :end end))))
 
 #+ccl
 (defmethod ccl:stream-read-vector ((stream zacl-socket) sequence start end)
@@ -138,7 +165,8 @@
       (read-sequence sequence (real-stream stream) :start start :end end)))
 
 (defmethod stream-force-output ((stream zacl-socket))
-  (force-output (real-stream stream)))
+  (with-deadline-maybe :write-timeout (write-timeout stream)
+    (force-output (real-stream stream))))
 
 (defmethod close ((stream zacl-socket) &key abort)
   (declare (ignore abort))
@@ -347,9 +375,15 @@
     (error "Cannot supply both a CONTEXT and one of CERTIFICATE, KEY, CA-FILE, CA-DIRECTORY, CERTIFICATE-PASSWORD, CRL-FILE, or CRL-CHECK."))
   (apply #'make-ssl-stream socket :server args))
 
-(defun socket:socket-control (socket &key read-timeout write-timeout)
-  (declare (ignore socket read-timeout write-timeout))
-  nil)
+(defun socket:socket-control (socket &key (read-timeout nil read-timeout-p)
+					  (write-timeout nil write-timeout-p))
+  #-sbcl (declare (ignore socket read-timeout write-timeout read-timeout-p write-timeout-p))
+  #+sbcl
+  (when read-timeout-p
+    (setf (read-timeout socket) read-timeout))
+  #+sbcl
+  (when write-timeout-p
+    (setf (write-timeout socket) write-timeout)))
 
 (defun make-ssl-context (&key method
 			      certificate
