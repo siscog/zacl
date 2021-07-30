@@ -98,9 +98,9 @@
 
 (defgeneric mp:dequeue (queue &key wait empty-queue-result whostate)
   (:method (queue &key wait empty-queue-result whostate)
-    (declare (ignore whostate wait))
+    (declare (ignore whostate #-sbcl wait))
     (with-lock-held ((lock queue))
-      (qpop (queue queue) empty-queue-result))))
+      (qpop (queue queue) empty-queue-result #+sbcl wait))))
 
 (defun mp:wait-for-input-available (stream-or-fds
                                     &key wait-function whostate timeout)
