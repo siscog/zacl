@@ -89,7 +89,8 @@
   (incf (bytes-written stream)))
 
 (defmethod stream-write-byte ((stream zacl-socket) byte)
-  (write-byte byte (real-stream stream)))
+  (with-deadline-maybe :write-timeout (read-timeout stream)
+    (write-byte byte (real-stream stream))))
 
 (defmethod stream-write-char ((stream zacl-socket) char)
   (map nil (lambda (octet)
