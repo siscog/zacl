@@ -8,6 +8,9 @@
 (defparameter *external-format-translations*
   '((:octets . :latin1)
     (:latin1-base . :latin1)
+    (:latin1 . :latin1)
+    (:ascii . :latin1)
+    (:iso8859-1 . :latin1)
     (:utf-8 . :utf-8)
     (nil . :latin1)))
 
