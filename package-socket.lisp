@@ -533,3 +533,10 @@
 	    (remove "" (uiop:split-string subject-one-liner
 					  :separator '(#\/))
 		    :test #'string=))))
+
+(defun socket:x509-certificate-subject-alt-name (x509-certificate)
+  ;; Remarks:
+  ;; - in ACL socket:x509-certificate-subject-alt-name returns:
+  ;;   '(("DNS" . "<name1>") ("DNS" . "<nameN>") ("IP Address" . "n.n.n.n") ("IP Address" . "n:n:n:n:n:n:n:n")))
+  
+  (cl+ssl::certificate-all-alt-names x509-certificate))

@@ -309,7 +309,7 @@
    #:x509-certificate-not-before ;; unimplemented
    #:x509-certificate-serial-number ;; unimplemented
    #:x509-certificate-subject
-   #:x509-certificate-subject-alt-name ;; unimplemented
+   #:x509-certificate-subject-alt-name
    #:x509-certificate-version ;; unimplemented
    ))
 
