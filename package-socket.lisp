@@ -412,7 +412,24 @@
 	     (warn "SSL v3 is deprecated and should not be used.")
 	     (setf (getf arguments :method) (cl+ssl::ssl-v3-method)))
 	    (:tlsv1
-	     (setf (getf arguments :method) (cl+ssl::ssl-TLSv1-method))))))
+	     (setf (getf arguments :method) (cl+ssl::ssl-TLSv1-method)))
+	    (:tlsv1.1
+	     (setf (getf arguments :method) (cl+ssl::ssl-TLSv1-1-method)))
+	    (:tlsv1.1+
+	     (setf (getf arguments :disabled-protocols)
+	           (list cl+ssl:+SSL-OP-NO-SSLv2+ cl+ssl:+SSL-OP-NO-SSLv3+
+	                 cl+ssl:+SSL-OP-NO-TLSv1+)))
+	    (:tlsv1.2
+	     (setf (getf arguments :method) (cl+ssl::ssl-TLSv1-2-method)))
+	    (:tlsv1.2+
+	     (setf (getf arguments :disabled-protocols)
+	           (list cl+ssl:+SSL-OP-NO-SSLv2+ cl+ssl:+SSL-OP-NO-SSLv3+
+	                 cl+ssl:+SSL-OP-NO-TLSv1+ cl+ssl:+SSL-OP-NO-TLSv1-1+)))
+	    (:tlsv1.3+
+	     (setf (getf arguments :disabled-protocols) (list CL+SSL::+SSL-OP-NO-SSLv2+ CL+SSL::+SSL-OP-NO-SSLv3+
+	                                                      CL+SSL::+SSL-OP-NO-TLSv1+ CL+SSL::+SSL-OP-NO-TLSv1-1+
+	                                                      CL+SSL::+SSL-OP-NO-TLSv1-2+)))
+	    )))
     (when ciphers
       (unless (stringp ciphers) (error "Argument CIPHERS must be a string"))
       (setf (getf arguments :cipher-list) ciphers))
