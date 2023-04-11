@@ -259,14 +259,18 @@ values otherwise."
                     :end end))
 
 (defun excl:octets-to-string (octets &key external-format
-                                       string string-start string-end truncate
-                                       (start 0) (end (length octets)))
-  (when (or string string-start string-end truncate)
-    (error "Unsupported options given to excl:octets-to-string"))
+                                          string (string-start 0) string-end
+                                          truncate
+                                          (start 0) (end (length octets)))
+  (declare (ignore truncate))
   (octets-to-string octets
+                    :string string
                     :start start
                     :end end
-                    :encoding (translate-external-format external-format)))
+                    :string-start string-start
+                    :string-end string-end
+                    :encoding (translate-external-format external-format)
+                    :return-written-size? t))
 
 (defun excl:schedule-finalization (object fun)
   ;; Doesn't work; semantics differ.
