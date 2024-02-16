@@ -441,4 +441,6 @@ package name.
   (:use)
   (:export #:string+))
 
-(defpackage #:acl-socket (:use))
+(defpackage #:acl-socket
+  (:use)
+  (:export #:*ssl-features*))

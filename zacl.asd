@@ -40,6 +40,7 @@
                (:file "package-sys")
                (:file "package-mp")
                (:file "package-socket")
+               (:file "package-acl-socket")
                (:file "package-si")
                (:file "package-ff")
                (:file "package-net.uri")
