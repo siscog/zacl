@@ -275,7 +275,8 @@
 						ciphers
 						crl-check crl-file
 						verify
-						server-name)
+						server-name
+						deadline)
   (declare (ignore crl-check crl-file))
   (ecase stream-type
     ((:client :server)))
@@ -304,6 +305,8 @@
 			    (setf (getf arguments :verify) verify))
 			  (when server-name
 			    (setf (getf arguments :hostname) server-name)))
+			(when (eq stream-type :server)
+			  (setf (getf arguments :deadline) deadline))
 			(apply (if (eq stream-type :client)
 				   #'make-ssl-client-stream
 				   #'make-ssl-server-stream)
@@ -344,7 +347,8 @@
 			  (make-ssl-server-stream (real-stream socket)
 					      :certificate certificate
 					      :key (or key certificate)
-					      :password certificate-password))))))
+					      :password certificate-password
+					      :deadline deadline))))))
     (setf (real-stream socket) stream)
     socket))
 
@@ -370,8 +374,9 @@
                                             certificate key certificate-password
                                             verify max-depth
                                             ca-file ca-directory
-					    crl-file crl-check)
-  (declare (ignorable method verify max-depth))
+					    crl-file crl-check
+					    deadline)
+  (declare (ignorable method verify max-depth deadline))
   (when (and context
 	     (or certificate key ca-file ca-directory certificate-password crl-file crl-check))
     (error "Cannot supply both a CONTEXT and one of CERTIFICATE, KEY, CA-FILE, CA-DIRECTORY, CERTIFICATE-PASSWORD, CRL-FILE, or CRL-CHECK."))
